@@ -75,7 +75,7 @@ void Taxonomy::write(const char *fn) const {
     fprintf(fp, "%s\n", name_.data());
     for(khiter_t ki(0); ki != kh_end(name_map_); ++ki) {
         if(kh_exist(name_map_, ki)) {
-            fprintf(fp, "%s\t%u\n", kh_key(name_map_, ki), kh_val(name_map_, ki)), ++nwritten;
+            fprintf(fp, "%s\t%u\n", kh_key(name_map_, ki).load(), kh_val(name_map_, ki).load()), ++nwritten;
             assert(kh_get(name, name_map_, kh_key(name_map_, ki)) != kh_end(name_map_));
             assert(kh_key(name_map_, ki));
         }
@@ -128,7 +128,7 @@ bool Taxonomy::operator==(Taxonomy &other) const {
     for(khiter_t ki = 0; ki != kh_end(other.name_map_); ++ki) {
         if(kh_exist(other.name_map_, ki)) {
             if(kh_get(name, name_map_, kh_key(other.name_map_, ki)) == kh_end(name_map_)) {
-                LOG_DEBUG("key %s missing from other\n", kh_key(name_map_, ki));
+                LOG_DEBUG("key %s missing from other\n", kh_key(name_map_, ki).load());
                 return false;
             }
             if(kh_val(other.name_map_, ki) != kh_val(name_map_, kh_get(name, name_map_, kh_key(other.name_map_, ki)))) {

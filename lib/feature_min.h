@@ -404,7 +404,7 @@ khash_t(c) *lca_map(const std::vector<std::string> &fns, khash_t(p) *tax_map,
 
     // Daemon -- check the status of currently running jobs, submit new ones when available.
     while(submitted < todo) {
-        LOG_DEBUG("Submitted %zu, todo %zu\n", submitted, todo);
+        //LOG_DEBUG("Submitted %zu, todo %zu\n", submitted, todo);
         tax_t taxid;
         for(auto &f: futures) {
             if(is_ready(f)) {
@@ -413,13 +413,13 @@ khash_t(c) *lca_map(const std::vector<std::string> &fns, khash_t(p) *tax_map,
                 if(used.find(index) != used.end()) continue;
                 used.insert(index);
                 if(subbed.find(submitted) != subbed.end()) throw "a party!";
-                LOG_DEBUG("Launching thread to read from file %s.\n", fns[submitted].data());
+                //LOG_DEBUG("Launching thread to read from file %s.\n", fns[submitted].data());
                 f = std::async(
                   std::launch::async, fill_set_genome<score>, fns[submitted].data(),
                   sp, counters[submitted], submitted, nullptr);
                 subbed.insert(submitted);
-                LOG_INFO("Submitted for %zu. Updating map for %zu. Total completed/all: %zu/%zu. Total size: %zu\n",
-                         submitted, index, completed, todo, kh_size(ret));
+                //LOG_INFO("Submitted for %zu. Updating map for %zu. Total completed/all: %zu/%zu. Total size: %zu\n",
+                //         submitted, index, completed, todo, kh_size(ret));
                 ++submitted, ++completed;
                 if((taxid = get_taxid(fns[index].data(), name_hash)) == UINT32_C(-1)) {
                     LOG_WARNING("Taxid for %s not listed in summary.txt. Not including.\n", fns[index].data());

@@ -141,7 +141,7 @@ T *khash_load_impl(std::FILE *fp) noexcept {
     std::fread(&rex->size, 1, sizeof(rex->size), fp);
     std::fread(&rex->upper_bound, 1, sizeof(rex->upper_bound), fp);
     LOG_DEBUG("buckets: %zu. nocc: %zu. size: %zu. ub: %zu\n", (size_t)rex->n_buckets, size_t(rex->n_occupied), size_t(rex->size), size_t(rex->upper_bound));
-    rex->flags = (std::uint32_t *)std::malloc(sizeof(*rex->flags) * __ac_fsize(rex->n_buckets));
+    rex->flags = (decltype(rex->flags))std::malloc(sizeof(*rex->flags) * __ac_fsize(rex->n_buckets));
     rex->keys = (keytype_t *)std::malloc(sizeof(*rex->keys) * rex->n_buckets);
     if(!rex->keys) std::fprintf(stderr, "Could not allocate %zu bytes of memory (%zu GB)\n", sizeof(*rex->keys) * rex->n_buckets, sizeof(*rex->keys) * rex->n_buckets >> 30), exit(1);
     rex->vals = (valtype_t *)std::malloc(sizeof(*rex->vals) * rex->n_buckets);
@@ -171,7 +171,7 @@ std::unordered_map<tax_t, strlist> tax2genome_map(khash_t(name) *name_map, const
 INLINE tax_t get_parent(khash_t(p) *taxmap, tax_t key) noexcept {
     // Returns maximum value if not found.
     khiter_t ki;
-    return ((ki = kh_get(p, taxmap, key)) != kh_end(taxmap)) ? kh_val(taxmap, ki)
+    return ((ki = kh_get(p, taxmap, key)) != kh_end(taxmap)) ? (tax_t)kh_val(taxmap, ki)
                                                              : std::numeric_limits<tax_t>::max();
 }
 

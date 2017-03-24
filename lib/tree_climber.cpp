@@ -114,10 +114,10 @@ std::vector<std::string> invert_lca_map(Database<khash_t(c)> &db, const char *fo
             auto m(ofps.find(kh_val(map, ki)));
             auto mc(ofp_counts.find(kh_val(map, ki)));
             if(m == ofps.end()) {
-                LOG_DEBUG("Adding %u to map\n", kh_val(map, ki));
+                LOG_DEBUG("Adding %u to map\n", kh_val(map, ki).load());
                 const std::uint64_t tmp(UINT64_C(-1));
                 char buf[256];
-                std::sprintf(buf, "%s%u.kmers.bin", fld.data(), kh_val(map, ki));
+                std::sprintf(buf, "%s%u.kmers.bin", fld.data(), kh_val(map, ki).load());
                 ret.emplace_back(buf);
                 m = ofps.emplace(kh_val(map, ki), std::fopen(buf, "wb")).first;
                 if(m->second == nullptr) {
@@ -138,7 +138,7 @@ std::vector<std::string> invert_lca_map(Database<khash_t(c)> &db, const char *fo
             fwritten = std::fwrite(&kh_key(map, ki), sizeof(kh_key(map, ki)), 1, m->second);
             if(fwritten != 1) {
                 char buf2[256];
-                std::sprintf(buf2, "Could not write dummy value. Size written: %i. taxid: %u\n", fwritten, kh_val(map, ki));
+                std::sprintf(buf2, "Could not write dummy value. Size written: %i. taxid: %u\n", fwritten, kh_val(map, ki).load());
                 perror(buf2), exit(1);
             }
 #if !NDEBUG
@@ -157,7 +157,7 @@ std::vector<std::string> invert_lca_map(Database<khash_t(c)> &db, const char *fo
             if(!kh_exist(map, ki)) continue;
             auto m(ofps.find(kh_val(map, ki)));
             if(m == ofps.end()) {
-                std::sprintf(buf, "%s%u.kmers.bin", fld.data(), kh_val(map, ki));
+                std::sprintf(buf, "%s%u.kmers.bin", fld.data(), kh_val(map, ki).load());
                 ret.emplace_back(buf);
             }
         }
@@ -185,7 +185,7 @@ khash_t(p) *pruned_taxmap(std::vector<std::string> &paths, khash_t(p) *taxmap, k
     for(const auto i: keep) {
         ki1 = kh_put(p, ret, i, &khr);
         ki2 = kh_get(p, taxmap, i);
-        kh_val(ret, ki1) = kh_val(taxmap, ki2);
+        kh_val(ret, ki1) = kh_val(taxmap, ki2).load();
     }
     return ret;
 }

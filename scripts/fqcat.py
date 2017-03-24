@@ -22,10 +22,6 @@ def is_valid_gzip(fn):
             raise
 
 
-def fname_sort(a):
-    return a.split("/")[-1].split("_")[2] + a.split("/")[-1].split("_")[4]
-
-
 def make_output(paths, outpath):
     if not outpath:
         if not paths:
@@ -71,6 +67,7 @@ def process_folder(path, fn1=None, fn2=None):
         else:
             raise ValueError("Fastq name '%s' with invalid "
                              "or missing read number." % fq)
+    fname_sort = lambda a: a.split("/")[-1].split("_")[2] + a.split("/")[-1].split("_")[4]
     r1s.sort(key=fname_sort), r2s.sort(key=fname_sort)
     ret = (make_output(r1s, fn1), make_output(r2s, fn2))
     if not ret[0] or not ret[1]:

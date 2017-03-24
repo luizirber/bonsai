@@ -250,10 +250,21 @@ void metatree_usage(char *arg) {
 
 //typedef std::tuple<std::uint64_t, int, std::vector<std::uint64_t>> indvec_t;
 
-template struct kh::khpp_t<std::vector<std::uint64_t> *, std::uint64_t, ptr_wang_hash_struct<std::vector<std::uint64_t> *>>;
-using pkh_t = kh::khpp_t<std::vector<std::uint64_t> *, std::uint64_t, ptr_wang_hash_struct<std::vector<std::uint64_t> *>>;
+using std::vector<std::uint64_t> = bmv_t;
+struct score_ind_t = std::pair<int, std::uint32_t>
+template struct kh::khpp_t<bmv_t *, std::uint32_t, ptr_wang_hash_struct<std::vector<std::uint64_t> *>>;
+using pkh_t = kh::khpp_t<bmv_t *, std::uint32_t, ptr_wang_hash_struct<std::vector<std::uint64_t> *>>;
+
+struct score_data_t {
+    tax_t parent_;
+    bitmap_t bm_;
+    std::vector<tax_t> descendents_;
+};
 
 
+struct score_manager_t {
+    std::vector<score_data_t> 
+};
 
 int metatree_main(int argc, char *argv[]) {
     if(argc < 5) metatree_usage(*argv);
@@ -294,7 +305,7 @@ int metatree_main(int argc, char *argv[]) {
         char buf[256];
         for(khiter_t ki(0); ki < kh_end(taxmap); ++ki) {
             if(!kh_exist(taxmap, ki)) continue;
-            std::sprintf(buf, "%s%u.kmers.bin", folder.data(), kh_val(taxmap, ki));
+            std::sprintf(buf, "%s%u.kmers.bin", folder.data(), kh_val(taxmap, ki).load());
             if(access(buf, F_OK) != -1) to_fetch.emplace_back(buf); // Only add to list if file exists.
         }
     }
@@ -311,6 +322,7 @@ int metatree_main(int argc, char *argv[]) {
     std::size_t index(0);
     std::vector<tax_t> parents;
     std::vector<std::vector<tax_t>> descendents;
+    score_manager_t;
     for(auto tax_iter(std::begin(nodes)), end_iter(tax_iter);tax_iter + 1 < std::end(nodes);tax_iter = end_iter + 1) {
         const tax_t parent_tax(get_parent(taxmap, *tax_iter));
         end_iter = tax_iter;
@@ -320,7 +332,7 @@ int metatree_main(int argc, char *argv[]) {
         std::set<tax_t> taxes(tax_iter, end_iter);
         std::unordered_map<tax_t, std::forward_list<std::string>> range_map;
         std::vector<std::forward_list<std::string>> list_vec;
-        auto has_plasmid = [](std::string &str) -> bool {return get_firstline(str.data()).find("plasmid") != std::string::npos;};
+        // auto has_plasmid = [](std::string &str) -> bool {return get_firstline(str.data()).find("plasmid") != std::string::npos;};
         std::vector<tax_t> parent_descendents(get_all_descendents(inverted_map, parent_tax));
         for(auto tax: parent_descendents) {
             auto m(tx2g.find(tax));

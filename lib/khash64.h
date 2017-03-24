@@ -131,6 +131,7 @@ int main() {
 #include <stdint.h>
 #include <mutex>
 #include <shared_mutex>
+#include <atomic>
 
 #if __cplusplus < 201402L || __GNUC__ < 6
 #define shared_mutex shared_timed_mutex
@@ -216,9 +217,9 @@ kh_inline std::uint64_t __ac_Wang64_hash(std::uint64_t key) {
 #define __KHASH_TYPE(name, khkey_t, khval_t) \
 	typedef struct kh_##name##_s { \
 		khint_t n_buckets, size, n_occupied, upper_bound; \
-		khint32_t *flags; \
-		khkey_t *keys; \
-		khval_t *vals; \
+		std::atomic<khint32_t> *flags; \
+		std::atomic<khkey_t> *keys; \
+		std::atomic<khval_t> *vals; \
 		mutable std::shared_mutex m;  \
 	} kh_##name##_t;
 
@@ -272,22 +273,22 @@ kh_inline std::uint64_t __ac_Wang64_hash(std::uint64_t key) {
 	SCOPE int kh_resize_##name(kh_##name##_t *h, khint_t new_n_buckets) \
 	{ /* This function uses 0.25*n_buckets bytes of working space instead of [sizeof(key_t+val_t)+.25]*n_buckets. */ \
         std::unique_lock<std::shared_mutex>(h->m);				        \
-		khint32_t *new_flags = 0;										\
+		std::atomic<khint32_t> *new_flags = 0;										\
 		khint_t j = 1;													\
 		{																\
 			kroundup64(new_n_buckets); 									\
 			if (new_n_buckets < 4) new_n_buckets = 4;					\
 			if (h->size >= (khint_t)(new_n_buckets * __ac_HASH_UPPER + 0.5)) j = 0;	/* requested size is too small */ \
 			else { /* hash table size to be changed (shrink or expand); rehash */ \
-				new_flags = (khint32_t*)kmalloc(__ac_fsize(new_n_buckets) * sizeof(khint32_t));	\
+				new_flags = (std::atomic<khint32_t>*)kmalloc(__ac_fsize(new_n_buckets) * sizeof(khint32_t));	\
 				if (!new_flags) return -1;								\
 				memset(new_flags, 0xaa, __ac_fsize(new_n_buckets) * sizeof(khint32_t)); \
 				if (h->n_buckets < new_n_buckets) {	/* expand */		\
-					khkey_t *new_keys = (khkey_t*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
+					std::atomic<khkey_t> *new_keys = (std::atomic<khkey_t>*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
 					if (!new_keys) { kfree(new_flags); return -1; }		\
 					h->keys = new_keys;									\
 					if (kh_is_map) {									\
-						khval_t *new_vals = (khval_t*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
+						std::atomic<khval_t> *new_vals = (std::atomic<khval_t>*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
 						if (!new_vals) { kfree(new_flags); return -1; }	\
 						h->vals = new_vals;								\
 					}													\
@@ -322,8 +323,8 @@ kh_inline std::uint64_t __ac_Wang64_hash(std::uint64_t key) {
 				}														\
 			}															\
 			if (h->n_buckets > new_n_buckets) { /* shrink the hash table */ \
-				h->keys = (khkey_t*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
-				if (kh_is_map) h->vals = (khval_t*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
+				h->keys = (std::atomic<khkey_t>*)krealloc((void *)h->keys, new_n_buckets * sizeof(khkey_t)); \
+				if (kh_is_map) h->vals = (std::atomic<khval_t>*)krealloc((void *)h->vals, new_n_buckets * sizeof(khval_t)); \
 			}															\
 			kfree(h->flags); /* free the working space */				\
 			h->flags = new_flags;										\
@@ -387,8 +388,7 @@ kh_inline std::uint64_t __ac_Wang64_hash(std::uint64_t key) {
 	SCOPE bool kh_try_set_##name(kh_##name##_t *h, const khint_t ki, const khval_t val)\
 	{\
 		std::shared_lock<std::shared_mutex>(h->m);					  \
-		const khval_t old(kh_val(h, ki));\
-		return __sync_bool_compare_and_swap(h->vals + ki, old, val);			  \
+		return __sync_bool_compare_and_swap((khval_t *)(h->vals + ki), kh_val(h, ki), val);			  \
 	}\
 	SCOPE void kh_set_##name(kh_##name##_t *h, khkey_t key, const khval_t val)	\
 	{\
@@ -396,9 +396,7 @@ kh_inline std::uint64_t __ac_Wang64_hash(std::uint64_t key) {
 		khint_t ki;\
 		int khr;\
 		if((ki = kh_get_##name(h, key)) == kh_end(h)) kh_put_##name(h, key, &khr);\
-		const khval_t old(kh_val(h, ki));\
-		while(!__sync_bool_compare_and_swap(h->vals + ki, old, val))\
-			if(h->keys[ki] != key) ki = kh_get_##name(h, key);\
+        while(!kh_try_set_##name(h, ki, val));\
 	}
 
 

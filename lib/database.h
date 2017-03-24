@@ -81,7 +81,7 @@ struct Database {
     typename std::enable_if<std::is_same<khash_t(c), Q>::value, std::uint32_t>::type
     get_lca(std::uint64_t kmer) {
         khiter_t ki;
-        return ((ki = kh_get(c, db_, kmer)) == kh_end(db_)) ? kh_val(db_, ki)
+        return ((ki = kh_get(c, db_, kmer)) == kh_end(db_)) ? kh_val(db_, ki).load()
                                                             : -1u;
     }
 };

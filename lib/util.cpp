@@ -98,16 +98,15 @@ khash_t(name) *build_name_hash(const char *fn) noexcept {
     khint_t ki;
     while((len = getline(&buf, &bufsz, fp)) >= 0) {
         switch(*buf) case '\0': case '\n': case '#': continue;
-        p = strchr(buf, '\t');
-        *p = 0;
+        *(p = strchr(buf, '\t')) = 0;
         ki = kh_put(name, ret, buf, &khr);
         if(khr == 0) { // Key already present.
-            LOG_INFO("Key %s already present. Updating value from %i to %s\n", kh_key(ret, ki), kh_val(ret, ki), p + 1);
+            LOG_INFO("Key %s already present. Updating value from %i to %s\n", kh_key(ret, ki).load(), kh_val(ret, ki).load(), p + 1);
         }  else {
             namelen = p - buf;
             kh_key(ret, ki) = (char *)std::malloc(namelen + 1);
-            memcpy((void*)kh_key(ret, ki), buf, namelen);
-           ((char *)kh_key(ret, ki))[namelen] = '\0';
+            memcpy((void*)kh_key(ret, ki).load(), buf, namelen);
+            ((char *)kh_key(ret, ki).load())[namelen] = 0;
         }
         kh_val(ret, ki) = atoi(p + 1);
     }
@@ -119,7 +118,7 @@ khash_t(name) *build_name_hash(const char *fn) noexcept {
 void destroy_name_hash(khash_t(name) *hash) noexcept {
     for(khint_t ki(kh_begin(hash)); ki != kh_end(hash); ++ki)
         if(kh_exist(hash, ki))
-            free((void *)kh_key(hash, ki));
+            free((void *)kh_key(hash, ki).load());
     kh_destroy(name, hash);
 }
 
