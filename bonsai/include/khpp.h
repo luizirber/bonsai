@@ -121,7 +121,7 @@ public:
     }
     void clear() {
         global_lock_.lock();
-        if constexpr(!pair_type::trivially_destructible()) {
+        CONSTEXPR_IF(!pair_type::trivially_destructible()) {
             for(index_type i(0); i < n_buckets_; ++i) {
                 if(exists(i)) {
                     pairs_[i].~pair_type();
@@ -178,7 +178,7 @@ public:
                                 pair.first = std::move(pairs_[i].first);
                                 pairs_[i].first = std::move(tmp);
                             }
-							if constexpr(is_map) {
+							CONSTEXPR_IF(is_map) {
                                 auto tmp(std::move(pair.second));
                                 pair.second = std::move(pairs_[i].second);
                                 pairs_[i].second = std::move(tmp);

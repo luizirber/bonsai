@@ -65,6 +65,14 @@
 #define gzbuffer(fp, size) gzbuffer(fp, size)
 #endif
 
+#ifndef PREFER_IF_CONSTEXPR
+#  if __cpp_if_constexpr >= 201606
+#    define PREFER_IF_CONSTEXPR if constexpr
+#  else
+#    define PREFER_IF_CONSTEXPR if
+#  endif
+#endif
+
 
 #ifdef USE_PDQSORT
 # include "pdqsort/pdqsort.h"
@@ -197,9 +205,9 @@ template<> inline khint_t khash_put(khash_t(all) *map, uint64_t key, int *ret) {
 }
 
 template<typename T, typename KType> khint_t khash_get(T *map, KType key) {
-    if constexpr(std::is_same_v<std::decay_t<KType>, uint64_t>) {
+    PREFER_IF_CONSTEXPR(std::is_same_v<std::decay_t<KType>, uint64_t>) {
         return kh_get(64, (khash_t(64) *)map, (uint64_t)key);
-    } else if constexpr(std::is_same_v<KType, const char *>) {
+    } else PREFER_IF_CONSTEXPR(std::is_same_v<KType, const char *>) {
         return kh_get(name, (khash_t(name) *)map, (const char *)key);
     } else {
         return kh_get(c, (khash_t(c) *)map, (uint32_t)key);
@@ -482,7 +490,8 @@ INLINE double kmer_entropy(uint64_t kmer, unsigned k) {
     double tmp(div * (counts >> 24)), sum(tmp * std::log2(tmp));
     tmp = div * ((counts >> 16) & 0xFF), sum += tmp * std::log2(tmp);
     tmp = div * ((counts >> 8) & 0xFF), sum += tmp * std::log2(tmp);
-    return tmp = div * (counts & 0xFF), sum += tmp * std::log2(tmp);
+    tmp = div * (counts & 0xFF), sum += tmp * std::log2(tmp);
+    return sum;
 }
 
 template<typename T> INLINE const char *get_cstr(const T &str) {return str.data();}
@@ -497,16 +506,16 @@ INLINE char *strchrnul(char *str, int c) {
 
 namespace detail {
     static const std::unordered_map<int, const char *> zerr2str {
-        {Z_OK, "Z_OK"},
-        {Z_STREAM_END, "Z_STREAM_END"},
-        {Z_STREAM_END, "Z_STREAM_END"},
-        {Z_NEED_DICT, "Z_NEED_DICT"},
-        {Z_ERRNO, "Z_ERRNO"},
-        {Z_STREAM_ERROR, "Z_STREAM_ERROR"},
-        {Z_DATA_ERROR, "Z_DATA_ERROR"},
-        {Z_MEM_ERROR, "Z_MEM_ERROR"},
-        {Z_BUF_ERROR, "Z_BUF_ERROR"},
-        {Z_VERSION_ERROR, "Z_VERSION_ERROR"}
+        // This could be lut'd.
+        {Z_OK,             "Z_OK"},
+        {Z_STREAM_END,     "Z_STREAM_END"},
+        {Z_NEED_DICT,      "Z_NEED_DICT"},
+        {Z_ERRNO,          "Z_ERRNO"},
+        {Z_STREAM_ERROR,   "Z_STREAM_ERROR"},
+        {Z_DATA_ERROR,     "Z_DATA_ERROR"},
+        {Z_MEM_ERROR,      "Z_MEM_ERROR"},
+        {Z_BUF_ERROR,      "Z_BUF_ERROR"},
+        {Z_VERSION_ERROR,  "Z_VERSION_ERROR"}
     };
 }
 

@@ -98,11 +98,21 @@ public:
       scorer_{},
       canonicalize_(canonicalize) {
         LOG_DEBUG("Canonicalizing: %s\n", canonicalize_ ? "True": "False");
+        PREFER_IF_CONSTEXPR(std::is_same_v<ScoreType, score::Entropy>) {
+            if(sp_.unspaced() && sp_.windowed())
+            if(data_) throw std::runtime_error("Invalid emp::Encoder created using a data field. This is to be used for an Entropy calculator metadata struct.");
+            data_ = static_cast<void *>(new EntropyQCalc(sp_.k_));
+        }
     }
     Encoder(const Spacer &sp, void *data, bool canonicalize=true): Encoder(nullptr, 0, sp, data, canonicalize) {}
     Encoder(const Spacer &sp, bool canonicalize=true): Encoder(sp, nullptr, canonicalize) {}
     Encoder(const Encoder &other): Encoder(other.sp_, other.data_) {}
     Encoder(unsigned k, bool canonicalize=true): Encoder(nullptr, 0, Spacer(k), nullptr, canonicalize) {}
+    ~Encoder() {
+        PREFER_IF_CONSTEXPR(std::is_same_v<ScoreType, score::Entropy>) {
+            delete static_cast<EntropyQCalc *>(data_);
+        }
+    }
 
     // Assign functions: These tell the encoder to fetch kmers from this string.
     // kstring and kseq are overloads which call assign(char *s, u64 l) on
@@ -116,9 +126,6 @@ public:
     INLINE void assign(kseq_t    *ks) {assign(&ks->seq);}
 
 
-#if !NDEBUG
-#pragma message("Don't forget to add a specialized Entropy calculation scheme for the unspaced, unwindowed case.")
-#endif
     template<typename Functor>
     INLINE void for_each_canon_windowed(const Functor &func, const char *str, u64 l) {
         u64 min(BF);

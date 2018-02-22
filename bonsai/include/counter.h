@@ -200,6 +200,7 @@ public:
     }
 
     void print_counts(std::FILE *fp) const {
+#if 0
         if constexpr(!std::is_scalar_v<T>) {
             struct vecc_t {
                 const T *vec_;
@@ -242,6 +243,7 @@ public:
                 std::fprintf(fp, "%s\t%s\n", std::to_string(el.first).data(), std::to_string(el.second).data());
             }
         }
+#endif
     }
 };
 
