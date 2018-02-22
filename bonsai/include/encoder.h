@@ -15,6 +15,7 @@
 #include "spacer.h"
 #include "util.h"
 #include "klib/kthread.h"
+#include "entropy_qcalc.h"
 #include <mutex>
 
 
