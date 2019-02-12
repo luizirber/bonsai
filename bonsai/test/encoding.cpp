@@ -141,6 +141,7 @@ TEST_CASE( "Spacer encodes and decodes contiguous, unminimized seeds correctly."
             gzrewind(fp);
             enc.set_canonicalize(false);
             enc.for_each([&](auto km) {okmers.insert(canonical_representation(km, 31));}, ks);
+            enc.for_each_aa([&](uint64_t prot_kmer) {std::fprintf(stderr, "protein kmer: %" PRIu64 "\n", prot_kmer);});
             size_t olap(0);
             for(const auto k: kmers) olap += (okmers.find(k) != okmers.end());
             LOG_DEBUG("Size of each: kmers %zu, okmers %zu, olap %zu\n", kmers.size(), okmers.size(), olap);

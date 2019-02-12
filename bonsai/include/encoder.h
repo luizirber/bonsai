@@ -124,21 +124,6 @@ private:
     qmap_t     qmap_; // queue of max scores and std::map which keeps kmers, scores, and counts so that we can select the top kmer for a window.
     const ScoreType  scorer_; // scoring struct
     bool canonicalize_;
-#if 0
-template<unsigned b1, unsigned b2, unsigned range=1>
-INLINE uint64_t swapbits(uint64_t x) {
-template<size_t lbits>
-INLINE uint64_t rol(uint64_t x, unsigned s) {
-template<size_t n>
-INLINE uint64_t lrot(uint64_t x) {
-    return (x << n) | (x >> (64 - n));
-}
-template<size_t n>
-INLINE uint64_t rrot(uint64_t x) {
-    return (x >> n) | (x << (64 - n));
-}
-#endif
-static constexpr uint64_t DEFAULT_ROLLING_SEED = UINT64_C(0xB0BAFE77C001D00D);
 
 public:
     Encoder(char *s, u64 l, const Spacer &sp, void *data=nullptr,
@@ -412,6 +397,61 @@ public:
     void for_each(const Functor &func, const ContainerType &strcon, kseq_t *ks=nullptr) {
         for(const auto &el: strcon) {
             for_each<Functor>(func, get_cstr(el), ks);
+        }
+    }
+    template<typename Functor>
+    INLINE void for_each_aa(const Functor &func) {
+        // Now 'k' means the protein k.
+        assert(k_ < 16);
+        std::array<uint64_t, 6> frames {0};
+        size_t max_sz = (l_ + 2) / 3;
+        uint8_t fwdc = 0, revc = 0;
+        uint64_t fwd1 = 0, rev1 = 0;
+        unsigned filled = 0; // If nonzero, signifies number of bases needed to skip before N leaves codon
+        unsigned frame = 0;
+        for(size_t i = 0; i < l_; ++i) {
+            fwd1 <<= cstr_lut[s_[l_]];
+            if(fwd1 == BF) {
+                rev1 = fwd1 = filled = 0;
+                
+            }
+            if(++frame == 3) frame = 0;
+        }
+    }
+
+    // Amino acid for_eaches
+    template<typename Functor>
+    INLINE void for_each_aa(const Functor &func, const char *str, u64 l) {
+        this->assign(str, l);
+        this->for_each_aa(func);
+    }
+    template<typename Functor>
+    INLINE void for_each_aa(const Functor &func, kseq_t *ks) {
+        while(kseq_read(ks) >= 0) assign(ks), for_each_aa<Functor>(func, ks->seq.s, ks->seq.l);
+    }
+    template<typename Functor>
+    void for_each_aa(const Functor &func, gzFile fp, kseq_t *ks=nullptr) {
+        bool destroy;
+        if(ks == nullptr) ks = kseq_init(fp), destroy = true;
+        else              kseq_assign(ks, fp), destroy = false;
+        for_each_aa<Functor>(func, ks);
+        if(destroy) kseq_destroy(ks);
+    }
+    template<typename Functor>
+    void for_each_aa(const Functor &func, const char *path, kseq_t *ks=nullptr) {
+        gzFile fp(gzopen(path, "rb"));
+        if(!fp) RUNTIME_ERROR(ks::sprintf("Could not open file at %s. Abort!\n", path).data());
+        for_each_aa<Functor>(func, fp, ks);
+        gzclose(fp);
+    }
+    template<typename Functor, typename ContainerType,
+             typename=typename std::enable_if<std::is_same<typename ContainerType::value_type::value_type, char>::value ||
+                                       std::is_same<typename std::decay<typename ContainerType::value_type>::type, char *>::value
+                                             >::type
+            >
+    void for_each_aa(const Functor &func, const ContainerType &strcon, kseq_t *ks=nullptr) {
+        for(const auto &el: strcon) {
+            for_each_aa<Functor>(func, get_cstr(el), ks);
         }
     }
 
